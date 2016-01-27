@@ -1,3 +1,6 @@
+
+const { Route, IndexRoute, Router, Link, History } = ReactRouter;
+
 var Comment = React.createClass({
   render: function() {
     return (
@@ -12,12 +15,26 @@ var Comment = React.createClass({
 });
 
 
-// tutorial2.js
-
 var CommentList = React.createClass({
+
+  getInitialState: function() {
+
+    var savedState = JSON.parse(localStorage.getItem('state'));
+
+    if (savedState !== null) {
+      return { 
+        data: savedState.data.map(function(comment) {
+          comment.timestamp = new Date(comment.timestamp);
+          return comment;
+        })
+      }
+    }
+
+    return { data: [] };
+  },
   render: function() {
 
-    var commentNodes = this.props.data.map(function(comment) {
+    var commentNodes = this.state.data.map(function(comment) {
       return (
         <Comment author={comment.author} key={comment.timestamp.getTime()} timestamp={comment.timestamp}>
           {comment.text}
@@ -26,8 +43,9 @@ var CommentList = React.createClass({
     });
 
     return (
-      <div className="commentList">
-        {commentNodes}
+      <div>
+        <Link to="/new" >New Comment</Link>
+        <div className="commentList">{commentNodes}</div>
       </div>
     );
   }
@@ -38,12 +56,16 @@ var CommentForm = React.createClass({
   getInitialState: function() {
     return {author: '', text: ''};
   },
+
+  mixins: [ History ],
+
   handleAuthorChange: function(e) {
     this.setState({author: e.target.value});
   },
   handleTextChange: function(e) {
     this.setState({text: e.target.value});
   },
+
 
   handleSubmit: function(e) {
     e.preventDefault();
@@ -53,13 +75,8 @@ var CommentForm = React.createClass({
       return;
     }
 
-    this.props.onCommentSubmit({
-      author: author,
-      text: text,
-      timestamp: new Date()
-    });
-
-    this.setState({author: '', text: ''});
+    // the next route could be a `prop`
+    this.history.pushState(null, "/");
   },
 
   render: function() {
@@ -83,46 +100,24 @@ var CommentForm = React.createClass({
   }
 });
 
+const App = React.createClass({
 
-var CommentBox = React.createClass({
-  
-  getInitialState: function() {
-
-    var savedState = JSON.parse(localStorage.getItem('state'));
-
-    if (savedState !== null) {
-      return { 
-        data: savedState.data.map(function(comment) {
-          comment.timestamp = new Date(comment.timestamp);
-          return comment;
-        })
-      }
-    }
-
-    return { data: [] };
-  },
-
-  handleCommentSubmit: function(comment) {
-
-    var state = {data: this.state.data.concat(comment)};
-    
-    localStorage.setItem('state', JSON.stringify(state));
-    this.setState(state);
-  },
-
-  render: function() {
+  render() {
     return (
-      <div className="commentBox">
-        <h1>Comments</h1>
-        <CommentForm onCommentSubmit={this.handleCommentSubmit}/>
-        <CommentList data={this.state.data}/>
+      <div>
+        <h1>Commentr</h1>
+        {this.props.children}
       </div>
-    );
+    )
   }
-});
-
+})
 
 ReactDOM.render(
-  <CommentBox />,
+  <Router>
+    <Route path="/" component={App}>
+      <IndexRoute component={CommentList} />
+      <Route path="new" component={CommentForm} />
+    </Route>
+  </Router>,
   document.getElementById('content')
 );
